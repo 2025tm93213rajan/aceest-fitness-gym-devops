@@ -28,3 +28,6 @@ Thumbs.db
 
 # Jenkins local data
 jenkins/jenkins_home/
+
+# Claude Code local config
+.claude/
