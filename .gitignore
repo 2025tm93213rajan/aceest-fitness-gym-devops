@@ -31,3 +31,6 @@ jenkins/jenkins_home/
 
 # Claude Code local config
 .claude/
+
+# pytest reports
+reports/
