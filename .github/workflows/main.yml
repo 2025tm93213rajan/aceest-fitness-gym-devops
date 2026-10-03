@@ -1,8 +1,10 @@
 name: CI
 
-# run on every push (any branch) and on every pull request
+# push builds only for the default branch; feature branches get checked through
+# their pull request instead, so a branch + its PR don't run the pipeline twice
 on:
   push:
+    branches: master
   pull_request:
 
 permissions:
