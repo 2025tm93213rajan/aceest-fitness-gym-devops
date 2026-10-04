@@ -249,3 +249,13 @@ Automated Tests in Docker):
 Workflow runs across the feature branches and `master`:
 
 ![GitHub Actions workflow runs](docs/images/github-actions-runs.png)
+
+Jenkins - build #1 of the `aceest-fitness-gym` pipeline job (pulled from GitHub `master`),
+all stages green:
+
+![Jenkins stage view](docs/images/jenkins-stage-view.png)
+
+End of the Jenkins console output - build finished with `SUCCESS`
+(the complete log is in [`jenkins-console-full.png`](docs/images/jenkins-console-full.png)):
+
+![Jenkins console output](docs/images/jenkins-console-success.png)
