@@ -20,6 +20,7 @@ workouts and membership - were ported into a testable web API.
 - [CI/CD overview](#cicd-overview)
 - [Jenkins setup](#jenkins-setup)
 - [Git workflow](#git-workflow)
+- [Pipeline evidence](#pipeline-evidence)
 
 ## Project structure
 
@@ -222,9 +223,10 @@ for a local lab setup but should not be done on a shared server.
 
 ## Git workflow
 
-- `master` is the stable branch; it is only changed through pull requests.
-- Work happens on short-lived branches named by purpose: `feature/*`, `infra/*`, `ci/*`,
-  `docs/*`.
+- `master` is the stable branch and every phase of the project was built on its own
+  short-lived branch, named by purpose: `feature/*`, `infra/*`, `ci/*`, `docs/*`.
+- Each branch was pushed to GitHub (so it got its own Actions run) and then merged into
+  `master`. From the documentation phase onwards changes are merged through pull requests.
 - Commit messages follow the conventional style (`feat:`, `test:`, `build:`, `ci:`,
   `docs:`, `chore:`) with a short body explaining what changed.
 
@@ -235,4 +237,15 @@ for a local lab setup but should not be done on a shared server.
 | `infra/docker` | Dockerfile |
 | `ci/github-actions` | GitHub Actions workflow |
 | `ci/jenkins` | Jenkinsfile + local Jenkins setup |
-| `docs/readme` | this documentation |
+| `docs/pipeline-evidence` | README corrections and pipeline screenshots (pull request) |
+
+## Pipeline evidence
+
+GitHub Actions - the three chained jobs passing (Build & Lint, Docker Image Assembly,
+Automated Tests in Docker):
+
+![GitHub Actions pipeline run](docs/images/github-actions-pipeline.png)
+
+Workflow runs across the feature branches and `master`:
+
+![GitHub Actions workflow runs](docs/images/github-actions-runs.png)
