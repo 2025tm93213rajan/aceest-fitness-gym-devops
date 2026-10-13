@@ -202,7 +202,7 @@ by a build are removed in the `post` step.
 
 ## Jenkins setup
 
-A ready-to-use local Jenkins (with Python and the Docker CLI baked in) is provided:
+A ready-to-use containerized Jenkins (with Python 3 and the Docker CLI baked in) is provided under [`jenkins/`](jenkins/):
 
 ```bash
 cd jenkins
@@ -210,16 +210,32 @@ docker compose up -d --build
 docker exec aceest-jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-1. Open <http://localhost:8080>, paste the password and install the suggested plugins.
-2. **New Item** → name `aceest-fitness-gym` → **Pipeline**.
-3. Pipeline definition: **Pipeline script from SCM**
-   - SCM: Git, repository URL of this repo
-   - Branch specifier: `*/master`
-   - Script path: `Jenkinsfile`
-4. Save and click **Build Now**.
+> **Note on Port Configuration (Prayogshala Rocky Linux):**  
+> In the college Prayogshala Rocky Linux lab VM (accessed via Apache Guacamole / XFCE), a pre-installed Jenkins service already runs on default port `8080`. To avoid port conflicts and ensure full reproducibility, our custom Jenkins container maps host port `8081` to container port `8080` (`8081:8080` in `jenkins/docker-compose.yml`).
 
-The container mounts the host Docker socket so the pipeline can build images. That is fine
-for a local lab setup but should not be done on a shared server.
+1. Open <http://localhost:8081> in your browser.
+2. Enter the initial administrator password:
+   ```
+   40d2818048e840eebc87f5b937f962fa
+   ```
+3. Install the suggested plugins.
+4. Create the Admin user account:
+   - **Username**: `admin`
+   - **Password**: `Test@123`
+   - **Full Name**: `2025tm93213rajan`
+   - **E-mail address**: `2025tm93213@wilp.bits-pilani.ac.in`
+   - **Jenkins URL**: `http://localhost:8081/`
+5. Create a new Pipeline job:
+   - Click **New Item** → enter `aceest-fitness-gym` → select **Pipeline** → click **OK**.
+6. Configure the Pipeline:
+   - Definition: **Pipeline script from SCM**
+   - SCM: **Git**
+   - Repository URL: `https://github.com/2025tm93213rajan/aceest-fitness-gym-devops.git`
+   - Branch Specifier: `*/master`
+   - Script Path: `Jenkinsfile`
+7. Click **Save** and trigger the build with **Build Now**.
+
+The container mounts `/var/run/docker.sock` from the host so the pipeline can assemble and run Docker images. This architecture provides an isolated, consistent build environment suitable for the lab setup.
 
 ## Git workflow
 
@@ -241,21 +257,45 @@ for a local lab setup but should not be done on a shared server.
 
 ## Pipeline evidence
 
-GitHub Actions - the three chained jobs passing (Build & Lint, Docker Image Assembly,
-Automated Tests in Docker):
+### 1. GitHub Actions CI
+
+The automated CI pipeline runs 3 chained jobs on every push and pull request (**Build & Lint**, **Docker Image Assembly**, and **Automated Tests in Docker**):
 
 ![GitHub Actions pipeline run](docs/images/github-actions-pipeline.png)
 
-Workflow runs across the feature branches and `master`:
+Workflow execution history across the feature branches and `master`:
 
 ![GitHub Actions workflow runs](docs/images/github-actions-runs.png)
 
-Jenkins - build #1 of the `aceest-fitness-gym` pipeline job (pulled from GitHub `master`),
-all stages green:
+### 2. Prayogshala Rocky Linux Environment Execution
 
-![Jenkins stage view](docs/images/jenkins-stage-view.png)
+The application, tests, and containerization were verified inside the college BITS Prayogshala Rocky Linux virtual environment (`s2025tm93213@ip-10-3-17-38`):
 
-End of the Jenkins console output - build finished with `SUCCESS`
-(the complete log is in [`jenkins-console-full.png`](docs/images/jenkins-console-full.png)):
+- **Docker Runtime Container & Health Check**: Packaging into a Docker image, running the container detached on port 5000, and validating service health via `curl http://localhost:5000/health`:
 
-![Jenkins console output](docs/images/jenkins-console-success.png)
+![Prayogshala Docker Build and Health](docs/prayogshala-images/1.png)
+
+- **Automated Pytest Execution inside Docker**: Building the test target and executing Pytest inside the container—all 77 tests passed with 100% code coverage:
+
+![Prayogshala Pytest in Docker](docs/prayogshala-images/2.png)
+
+- **Live REST API Functional Verification**: Interacting with live endpoints via `curl` to create client records and calculate targeted daily calories:
+
+![Prayogshala Curl API Validation](docs/prayogshala-images/3.png)
+
+### 3. Jenkins Pipeline BUILD & Quality Gate (Port 8081)
+
+Jenkins pipeline execution for job `aceest-fitness-gym` running at `http://localhost:8081` in Prayogshala:
+
+- **Stage View**: Clean checkout, environment setup, linting, unit tests, Docker build, Docker tests, and post-action cleanup all succeeded:
+
+![Jenkins Prayogshala Stages](docs/prayogshala-images/5.png)
+
+- **Test Report**: Complete test report displaying all 77 unit & integration tests passing:
+
+![Jenkins Prayogshala Test Report](docs/prayogshala-images/4.png)
+
+- **Console Output**: Successful build completion (`Finished: SUCCESS`) and Docker image cleanup:
+
+![Jenkins Prayogshala Console Success](docs/prayogshala-images/6.png)
+

@@ -4,7 +4,8 @@ services:
     container_name: aceest-jenkins
     user: root
     ports:
-      - "8080:8080"
+      # Port 8081 on host to avoid conflict with pre-installed Jenkins running on 8080 in Prayogshala
+      - "8081:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
