@@ -8,7 +8,7 @@
 
 | Field                       | Details                                                                                                                                                                                               |
 | :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Student Name**            | Rajan                                                                                                                                                                                                 |
+| **Student Name**            | Rajan Kumar                                                                                                                                                                                           |
 | **BITS ID**                 | 2025TM93213                                                                                                                                                                                           |
 | **Course**                  | Introduction to DevOps (Merged - CSIZG514 / SEZG514) (S1-26)                                                                                                                                          |
 | **Submission Type**         | Public GitHub Repository and Comprehensive Implementation Evidence                                                                                                                                    |
@@ -27,7 +27,7 @@ The core objective of this assignment is to design, develop, and automate an end
 
 The application transitions through a structured, multi-tier deployment and validation pipeline:
 
-$$\text{Legacy Prototypes} \longrightarrow \text{Modular Flask REST API} \longrightarrow \text{Git/GitHub VCS} \longrightarrow \text{Pytest (100\% Coverage)} \longrightarrow \text{Multi-Stage Docker} \longrightarrow \text{GitHub Actions CI} \longrightarrow \text{Prayogshala Linux VM} \longrightarrow \text{Jenkins BUILD Gate (Port 8081)}$$
+![ACEest End-to-End Delivery Lifecycle](docs/mermaid-images/1.png)
 
 ### Scope of Implementation
 
@@ -296,16 +296,7 @@ A dedicated Jenkins server was deployed via Docker Compose with access to the ho
 
 The declarative `Jenkinsfile` enforces rigorous verification gates:
 
-```mermaid
-graph LR
-    A[Checkout SCM] --> B[Clean Checkout]
-    B --> C[Setup Environment]
-    C --> D[Lint: compileall & flake8]
-    D --> E[Unit Tests & JUnit Report]
-    E --> F[Docker Build]
-    F --> G[Docker Tests]
-    G --> H[Post: Image Cleanup]
-```
+![Jenkins Pipeline Lifecycle Stages](docs/mermaid-images/2.png)
 
 1. **Checkout SCM & Clean Checkout**: Cleans the build workspace completely and checks out the latest commit from `master`.
 2. **Setup Environment**: Creates a fresh virtualenv and installs dependencies from `requirements-dev.txt`.
