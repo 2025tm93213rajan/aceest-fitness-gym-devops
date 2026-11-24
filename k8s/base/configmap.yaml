@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aceest-config
+  namespace: aceest-fitness
+data:
+  GUNICORN_WORKERS: "2"
+  GUNICORN_THREADS: "2"
+  ACEEST_DB: "/data/aceest_fitness.db"
+  LOG_LEVEL: "INFO"

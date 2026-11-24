@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-shadow-service
+  namespace: aceest-fitness
+  labels:
+    app: aceest-shadow
+spec:
+  type: ClusterIP
+  selector:
+    app: aceest-shadow
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

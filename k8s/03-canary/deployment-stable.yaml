@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-stable
+  namespace: aceest-fitness
+  labels:
+    app: aceest-canary-app
+    track: stable
+    version: v1.0.0
+spec:
+  replicas: 3 # 75% traffic baseline
+  selector:
+    matchLabels:
+      app: aceest-canary-app
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: aceest-canary-app
+        track: stable
+        version: v1.0.0
+    spec:
+      containers:
+        - name: aceest-app
+          image: 2025tm93213rajan/aceest-fitness:v1.0.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: APP_RELEASE
+              value: "v1-stable"
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5

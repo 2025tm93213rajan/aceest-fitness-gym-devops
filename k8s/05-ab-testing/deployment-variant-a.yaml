@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-variant-a
+  namespace: aceest-fitness
+  labels:
+    app: aceest-ab
+    variant: A
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aceest-ab
+      variant: A
+  template:
+    metadata:
+      labels:
+        app: aceest-ab
+        variant: A
+        version: v1.0.0
+    spec:
+      containers:
+        - name: aceest-app
+          image: 2025tm93213rajan/aceest-fitness:v1.0.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: APP_RELEASE
+              value: "v1-control-a"
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
