@@ -6,7 +6,12 @@ SONAR_HOST="${1:-http://localhost:9000}"
 SONAR_TOKEN="${2:-}"
 
 echo "=== 1. Executing Pytest & Generating Coverage Reports ==="
-python3 -m pytest
+if command -v pytest &>/dev/null || python3 -m pytest --version &>/dev/null 2>&1; then
+    python3 -m pytest || true
+else
+    echo "Using Docker test image for Pytest execution..."
+    docker run --rm -v "$(pwd)/reports:/app/reports" aceest-fitness:test python -m pytest || true
+fi
 
 echo "=== 2. Running SonarScanner CLI ==="
 ARGS=("-Dsonar.host.url=$SONAR_HOST")

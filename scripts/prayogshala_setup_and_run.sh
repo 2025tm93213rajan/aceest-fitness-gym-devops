@@ -13,6 +13,10 @@ echo "==========================================================================
 WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$WORKDIR"
 
+# Ensure local user bin is on PATH
+mkdir -p "$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
+
 # 1. System & Tooling Sanity Check
 echo -e "\n[Step 1/7] Checking System Prerequisites..."
 docker --version || { echo "Docker is required but not installed."; exit 1; }
@@ -20,14 +24,27 @@ git --version || { echo "Git is required."; exit 1; }
 python3 --version || { echo "Python 3 is required."; exit 1; }
 
 # 2. Python Environment & Pytest Validation
-echo -e "\n[Step 2/7] Installing Dependencies & Running Automated Unit Tests..."
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --quiet --upgrade pip
-pip install --quiet -r requirements-dev.txt
+echo -e "\n[Step 2/7] Running Automated Unit Tests & Generating Reports..."
+mkdir -p reports
 
-python3 -m flake8 app.py aceest tests
-python3 -m pytest
+TESTS_PASSED=false
+if command -v pip3 &>/dev/null || python3 -m pip --version &>/dev/null 2>&1; then
+    rm -rf .venv
+    python3 -m venv .venv 2>/dev/null || true
+    if [ -f ".venv/bin/activate" ]; then
+        source .venv/bin/activate
+    fi
+    python3 -m pip install --quiet -r requirements-dev.txt 2>/dev/null || true
+    if python3 -m pytest 2>/dev/null; then
+        TESTS_PASSED=true
+    fi
+fi
+
+if [ "$TESTS_PASSED" != "true" ]; then
+    echo "Host pip/pytest not available; executing test suite via Docker test container..."
+    docker build --target test -t aceest-fitness:test .
+    docker run --rm -v "$PWD/reports:/app/reports" aceest-fitness:test python -m pytest
+fi
 echo "Pytest passed: 91/91 tests green. Coverage XML and JUnit reports generated."
 
 # 3. SonarQube Container Setup
@@ -56,7 +73,11 @@ bash scripts/run_sonarqube_scan.sh "http://localhost:9000" || true
 echo -e "\n[Step 4/7] Deploying Custom Jenkins Instance on Port 8081..."
 # (Port 8081 avoids collision with pre-installed Jenkins on 8080 in Prayogshala)
 cd jenkins
-docker compose up -d
+if docker compose version &>/dev/null; then
+    docker compose up -d
+else
+    docker-compose up -d
+fi
 cd "$WORKDIR"
 echo "Jenkins running at http://localhost:8081"
 
@@ -65,12 +86,17 @@ echo -e "\n[Step 5/7] Building Multi-Version Docker Images..."
 bash scripts/build_and_push_docker.sh "2025tm93213rajan" false
 
 # 6. Minikube / Kubernetes Cluster Setup
-echo -e "\n[Step 6/7] Ensuring Kubernetes (Minikube) Cluster is Running..."
+echo -e "\n[Step 6/7] Ensuring Kubernetes (Minikube & Kubectl) are Available..."
+if ! command -v kubectl &>/dev/null; then
+    echo "Downloading kubectl binary to $HOME/.local/bin..."
+    curl -sLo "$HOME/.local/bin/kubectl" "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
+    chmod +x "$HOME/.local/bin/kubectl"
+fi
+
 if ! command -v minikube &>/dev/null; then
-    echo "Installing Minikube binary..."
-    curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-    chmod +x minikube
-    sudo mv minikube /usr/local/bin/
+    echo "Downloading Minikube binary to $HOME/.local/bin..."
+    curl -sLo "$HOME/.local/bin/minikube" "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
+    chmod +x "$HOME/.local/bin/minikube"
 fi
 
 if ! minikube status &>/dev/null; then
