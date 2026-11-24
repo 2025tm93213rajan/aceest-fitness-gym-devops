@@ -31,10 +31,15 @@ CMD ["python", "-m", "pytest", "--cov=aceest", "--cov-report=term-missing"]
 # ---------- stage 3: final runtime image (default target) ----------
 FROM python:3.12-slim AS runtime
 
+ARG APP_VERSION=2.0.0
+ARG APP_RELEASE=v2-stable
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    ACEEST_DB=/data/aceest_fitness.db
+    ACEEST_DB=/data/aceest_fitness.db \
+    APP_VERSION=$APP_VERSION \
+    APP_RELEASE=$APP_RELEASE
 
 # don't run as root inside the container
 RUN useradd --create-home --uid 1000 appuser \

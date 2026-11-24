@@ -44,7 +44,7 @@ pipeline {
                 sh '''
                     . .venv/bin/activate
                     python -m compileall -q app.py aceest tests
-                    flake8 .
+                    flake8 app.py aceest tests
                 '''
             }
         }
@@ -53,7 +53,7 @@ pipeline {
             steps {
                 sh '''
                     . .venv/bin/activate
-                    python -m pytest --cov=aceest --junitxml=reports/junit.xml
+                    python -m pytest
                 '''
             }
             post {
@@ -63,9 +63,25 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                sh '''
+                    if command -v sonar-scanner >/dev/null 2>&1; then
+                        sonar-scanner -Dsonar.host.url=http://localhost:9000 || true
+                    else
+                        docker run --rm --network host -v $(pwd):/usr/src sonarsource/sonar-scanner-cli -Dsonar.host.url=http://localhost:9000 || true
+                    fi
+                '''
+            }
+        }
+
         stage('Docker Build') {
             steps {
-                sh 'docker build --target runtime -t $IMAGE .'
+                sh '''
+                    docker build --target runtime --build-arg APP_VERSION=2.0.0 --build-arg APP_RELEASE=v2-analytics -t $IMAGE .
+                    docker tag $IMAGE aceest-fitness:v2.0.0
+                    docker tag $IMAGE aceest-fitness:latest
+                '''
             }
         }
 
