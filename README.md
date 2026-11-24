@@ -20,6 +20,7 @@ workouts and membership - were ported into a testable web API.
 - [CI/CD overview](#cicd-overview)
 - [Jenkins setup](#jenkins-setup)
 - [Git workflow](#git-workflow)
+- [Assignment 2: Progressive Kubernetes Delivery & Quality Gates](#assignment-2-progressive-kubernetes-delivery--quality-gates)
 - [Pipeline evidence](#pipeline-evidence)
 
 ## Project structure
@@ -28,15 +29,31 @@ workouts and membership - were ported into a testable web API.
 .
 ├── app.py                  # entry point (flask run / gunicorn app:app)
 ├── aceest/
-│   ├── __init__.py         # application factory
+│   ├── __init__.py         # application factory + dynamic version configuration
 │   ├── db.py               # SQLite connection + schema
-│   ├── routes.py           # REST endpoints
-│   └── services.py         # business rules + input validation (pure functions)
-├── tests/                  # pytest suite
-├── Dockerfile              # multi-stage: builder / test / runtime
-├── Jenkinsfile             # Jenkins BUILD pipeline
-├── jenkins/                # Dockerfile + compose file for a local Jenkins server
-├── .github/workflows/main.yml   # GitHub Actions pipeline
+│   ├── routes.py           # REST endpoints (/health, /version, /analytics)
+│   └── services.py         # business rules, analytics engine + validation
+├── tests/                  # pytest suite (91 test cases, 100% statement coverage)
+├── Dockerfile              # multi-stage: builder / test / runtime (with version build-args)
+├── Jenkinsfile             # Jenkins CI/CD pipeline (SonarQube + Docker build)
+├── jenkins/                # Dockerfile + compose file for custom Jenkins (Port 8081)
+├── sonarqube/              # SonarQube LTS Community container setup (Port 9000)
+├── sonar-project.properties # SonarQube project analysis & Quality Gate specification
+├── k8s/                    # Kubernetes Progressive Delivery manifests
+│   ├── base/               # Namespace, ConfigMap, PersistentVolumeClaim
+│   ├── 01-rolling-update/  # Zero-downtime RollingUpdate (NodePort 30080)
+│   ├── 02-blue-green/      # Blue-Green active/preview services (NodePort 30081/30082)
+│   ├── 03-canary/          # Canary weighted release (NodePort 30083)
+│   ├── 04-shadow/          # Shadow dark launch traffic mirroring (NodePort 30084)
+│   ├── 05-ab-testing/      # A/B testing with HTTP header routing (NodePort 30085/30086)
+│   └── 06-rollback/        # Failure detection & automated rollout undo
+├── scripts/                # Cross-platform automation scripts (.ps1 and .sh)
+│   ├── build_and_push_docker.* # Multi-version container builder (v1.0.0, v2.0.0, canary, latest)
+│   ├── deploy_all_strategies.* # One-click cluster deployment of all K8s strategies
+│   ├── verify_all_deployments.* # Automated endpoint verification test harness
+│   ├── run_sonarqube_scan.*    # Pytest XML generation + SonarScanner execution
+│   └── prayogshala_setup_and_run.sh # Complete automated runbook for BITS Prayogshala
+├── .github/workflows/main.yml # GitHub Actions pipeline (Lint, Multi-version Docker, Tests)
 ├── legacy/                 # original Tkinter versions v1.0 - v3.2.4
 ├── requirements.txt        # runtime dependencies
 └── requirements-dev.txt    # + pytest, pytest-cov, flake8
@@ -85,12 +102,15 @@ flake8 .
 ```
 
 The tests use a temporary SQLite database per test, so they never touch real data.
-Current state: **77 tests, 100% coverage** of the `aceest` package.
+Current state: **91 tests, 100% statement coverage** of the `aceest` package.
+Every test execution automatically generates:
+- `reports/junit.xml`: Full JUnit test run telemetry.
+- `reports/coverage.xml`: Cobertura XML report for SonarQube ingestion.
 
 | File | What it covers |
 |------|----------------|
-| `tests/test_services.py` | calorie formula, BMI value + category boundaries, membership status, date helpers, validation rules |
-| `tests/test_api.py` | every endpoint, including 400 / 404 / 409 / 422 error paths and cascading delete |
+| `tests/test_services.py` | calorie formula, BMI value + boundaries, membership status, date helpers, client analytics, fitness ratings |
+| `tests/test_api.py` | every endpoint, including /health, /version, /clients/<name>/analytics, A/B variant headers, and error paths |
 
 ## Running with Docker
 
@@ -298,4 +318,67 @@ Jenkins pipeline execution for job `aceest-fitness-gym` running at `http://local
 - **Console Output**: Successful build completion (`Finished: SUCCESS`) and Docker image cleanup:
 
 ![Jenkins Prayogshala Console Success](docs/prayogshala-images/6.png)
+
+---
+
+## Assignment 2: Progressive Kubernetes Delivery & Quality Gates
+
+Assignment 2 elevates the project into an enterprise Continuous Delivery platform implementing dynamic application versioning, SonarQube static code quality gates, Docker Hub multi-version registries, and all five advanced Kubernetes deployment methodologies.
+
+### 1. Multi-Version Application Architecture
+- **v1.0.0 (Baseline)**: Core fitness programs, BMI, caloric estimates (`v1-core`).
+- **v2.0.0 (Analytics)**: Adds dynamic metadata (`/version`, `/api/version`), client fitness analytics (`GET /clients/<name>/analytics`), and A/B test variant detection (`X-Features: beta`).
+- Build versioned images dynamically using Docker build-args:
+  ```bash
+  # Build v1.0.0, v2.0.0, and canary in one command
+  pwsh scripts/build_and_push_docker.ps1   # Windows
+  bash scripts/build_and_push_docker.sh    # Linux / Prayogshala
+  ```
+- **Docker Hub Repository**: [`2025tm93213rajan/aceest-fitness`](https://hub.docker.com/r/2025tm93213rajan/aceest-fitness) (tags: `v1.0.0`, `v2.0.0`, `canary`, `latest`).
+
+### 2. Static Code Analysis & SonarQube Quality Gate
+- **Server**: Configured via `sonarqube/docker-compose.yml` on port **9000**.
+- **Specification**: `sonar-project.properties` maps sources (`aceest`, `app.py`) and consumes `reports/coverage.xml` and `reports/junit.xml`.
+- **Run Scan**:
+  ```bash
+  pwsh scripts/run_sonarqube_scan.ps1      # Windows
+  bash scripts/run_sonarqube_scan.sh       # Linux / Prayogshala
+  ```
+- **Status**: **Quality Gate: PASSED** (0 bugs, 0 vulnerabilities, 0 hotspots, 100% line coverage).
+
+### 3. Kubernetes Progressive Delivery (All 5 Strategies)
+All strategy manifests reside under `k8s/` and can be deployed with a single command:
+```bash
+pwsh scripts/deploy_all_strategies.ps1    # Windows Minikube
+bash scripts/deploy_all_strategies.sh     # Linux / Prayogshala
+```
+
+| Strategy | Manifest Path | Kubernetes Mechanism | Verification Endpoint |
+| :--- | :--- | :--- | :--- |
+| **1. Rolling Update** | `k8s/01-rolling-update/` | `RollingUpdate` (maxSurge=1, maxUnavailable=0) | `http://<cluster-ip>:30080/version` |
+| **2. Blue-Green** | `k8s/02-blue-green/` | Instant Service selector switch (`role: blue` / `role: green`) | Production: `30081`, Preview: `30082` |
+| **3. Canary Release** | `k8s/03-canary/` | Weighted Pod distribution (3 stable : 1 canary = 75/25%) + Ingress weight | `http://<cluster-ip>:30083/version` |
+| **4. Shadow Deployment** | `k8s/04-shadow/` | NGINX Ingress traffic mirror module (dark launch with 0% latency penalty) | `http://<cluster-ip>:30084/version` |
+| **5. A/B Testing** | `k8s/05-ab-testing/` | Header-based routing (`X-Features: beta` -> Variant B, standard -> Variant A) | Control: `30085`, Experiment: `30086` |
+| **6. Automated Rollback** | `k8s/06-rollback/` | Probe failure detection & `kubectl rollout undo` automated recovery | Tested via `scripts/test_rollback.*` |
+
+### 4. Automated Cluster Verification Harness
+Run the automated test suite across all 5 strategies:
+```bash
+pwsh scripts/verify_all_deployments.ps1 localhost   # Windows
+bash scripts/verify_all_deployments.sh $(minikube ip) # Prayogshala
+```
+
+### 5. Single-Command Reproduction in BITS Prayogshala
+Inside the college Rocky Linux VM (`s2025tm93213@ip-10-3-17-38`):
+```bash
+cd ~
+git clone https://github.com/2025tm93213rajan/aceest-fitness-gym-devops.git
+cd aceest-fitness-gym-devops
+bash scripts/prayogshala_setup_and_run.sh
+```
+
+---
+
+> For detailed academic write-up, architectural diagrams, challenges, and deliverables matrix, see the full report: **[`ACEest_DevOps_Assignment_2_2025TM93213.md`](ACEest_DevOps_Assignment_2_2025TM93213.md)**.
 
