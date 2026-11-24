@@ -11,7 +11,10 @@ def url(name, suffix=""):
 def test_health(client):
     res = client.get("/health")
     assert res.status_code == 200
-    assert res.get_json()["status"] == "ok"
+    body = res.get_json()
+    assert body["status"] == "ok"
+    assert "version" in body
+    assert body["service"] == "aceest-fitness-gym"
 
 
 def test_list_programs(client):
@@ -242,3 +245,59 @@ def test_sub_resources_bad_body(client, saved_client):
     for suffix in ("/progress", "/workouts", "/metrics"):
         res = client.post(url(saved_client, suffix), data="x", content_type="text/plain")
         assert res.status_code == 400
+
+
+# ---------- version & analytics endpoints ----------
+
+def test_version_endpoints(client):
+    for ep in ("/version", "/api/version"):
+        res = client.get(ep)
+        assert res.status_code == 200
+        body = res.get_json()
+        assert body["service"] == "aceest-fitness-gym"
+        assert "version" in body
+        assert "release" in body
+        assert body["variant"] == "A"
+        assert "client_analytics" in body["features"]
+
+
+def test_version_endpoint_ab_variant_header(client):
+    res = client.get("/version", headers={"X-Features": "beta"})
+    assert res.status_code == 200
+    assert res.get_json()["variant"] == "B"
+
+
+def test_client_analytics_unknown_client(client):
+    assert client.get("/clients/Unknown/analytics").status_code == 404
+
+
+def test_client_analytics_full_history(client, saved_client):
+    client.post(url(saved_client, "/progress"), json={"adherence": 80})
+    client.post(url(saved_client, "/progress"), json={"adherence": 90})
+    client.post(url(saved_client, "/workouts"), json={
+        "date": "2026-03-01", "workout_type": "Strength", "duration_min": 45,
+    })
+    client.post(url(saved_client, "/workouts"), json={
+        "date": "2026-03-02", "workout_type": "Cardio", "duration_min": 60,
+    })
+    client.post(url(saved_client, "/metrics"), json={"weight": 68.0, "waist": 78})
+
+    res = client.get(url(saved_client, "/analytics"))
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["client"] == saved_client
+    assert body["total_workouts"] == 2
+    assert body["total_duration_min"] == 105
+    assert body["avg_adherence"] == 85.0
+    assert body["weight_delta"] == -2.0
+    assert body["fitness_rating"] == "Elite"
+
+
+def test_client_analytics_empty_history(client, saved_client):
+    res = client.get(url(saved_client, "/analytics"))
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["client"] == saved_client
+    assert body["total_workouts"] == 0
+    assert body["avg_adherence"] is None
+    assert body["fitness_rating"] == "Unranked"

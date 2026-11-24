@@ -1,6 +1,6 @@
 import sqlite3
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from aceest import services
 from aceest.db import get_db
@@ -25,7 +25,35 @@ def json_body():
 
 @bp.get("/health")
 def health():
-    return jsonify({"status": "ok", "service": "aceest-fitness-gym"})
+    version = current_app.config.get("VERSION", "2.0.0")
+    return jsonify({
+        "status": "ok",
+        "service": "aceest-fitness-gym",
+        "version": version,
+    })
+
+
+@bp.get("/version")
+@bp.get("/api/version")
+def app_version():
+    version = current_app.config.get("VERSION", "2.0.0")
+    release = current_app.config.get("RELEASE", "v2-stable")
+    variant = "B" if request.headers.get("X-Features") == "beta" else "A"
+    return jsonify({
+        "service": "aceest-fitness-gym",
+        "version": version,
+        "release": release,
+        "variant": variant,
+        "features": [
+            "client_management",
+            "bmi_calculations",
+            "calorie_estimation",
+            "workout_tracking",
+            "adherence_progress",
+            "body_metrics",
+            "client_analytics",
+        ],
+    })
 
 
 # ---------- programs ----------
@@ -240,3 +268,30 @@ def add_metrics(name):
 @bp.get("/clients/<name>/metrics")
 def get_metrics(name):
     return list_records(name, "metrics", "date DESC, id DESC")
+
+
+@bp.get("/clients/<name>/analytics")
+def client_analytics(name):
+    client = get_client(name)
+    if client is None:
+        return error("client not found", 404)
+    db = get_db()
+    progress_rows = [
+        dict(r) for r in db.execute(
+            "SELECT * FROM progress WHERE client_name = ? ORDER BY id", (name,)
+        ).fetchall()
+    ]
+    workout_rows = [
+        dict(r) for r in db.execute(
+            "SELECT * FROM workouts WHERE client_name = ? ORDER BY date DESC, id DESC", (name,)
+        ).fetchall()
+    ]
+    metrics_rows = [
+        dict(r) for r in db.execute(
+            "SELECT * FROM metrics WHERE client_name = ? ORDER BY date DESC, id DESC", (name,)
+        ).fetchall()
+    ]
+    summary = services.calculate_client_analytics(
+        client, progress_rows, workout_rows, metrics_rows
+    )
+    return jsonify({"client": name, **summary})

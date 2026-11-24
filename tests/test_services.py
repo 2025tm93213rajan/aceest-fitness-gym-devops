@@ -170,3 +170,49 @@ def test_validate_metrics_needs_one_value():
 def test_validate_metrics_bad_date():
     _, errors = services.validate_metrics({"weight": 70, "date": "12-03-2026"})
     assert errors == ["date must be YYYY-MM-DD"]
+
+
+# ---------- analytics & versioning ----------
+
+@pytest.mark.parametrize("adherence, workouts, expected", [
+    (None, 0, "Unranked"),
+    (85, 2, "Elite"),
+    (50, 10, "Elite"),
+    (70, 2, "Consistent"),
+    (40, 6, "Consistent"),
+    (45, 2, "Developing"),
+])
+def test_fitness_rating(adherence, workouts, expected):
+    assert services.fitness_rating(adherence, workouts) == expected
+
+
+def test_calculate_client_analytics_full():
+    client = {"name": "Asha Rao", "weight": 70.0, "program": "FL"}
+    progress = [{"adherence": 80}, {"adherence": 90}]
+    workouts = [{"duration_min": 45}, {"duration_min": 60}]
+    metrics = [{"weight": 68.5}, {"weight": 69.0}]
+
+    res = services.calculate_client_analytics(client, progress, workouts, metrics)
+    assert res["program"] == "FL"
+    assert res["total_workouts"] == 2
+    assert res["total_duration_min"] == 105
+    assert res["avg_adherence"] == 85.0
+    assert res["weight_delta"] == -1.5
+    assert res["fitness_rating"] == "Elite"
+
+
+def test_calculate_client_analytics_empty():
+    client = {"name": "Asha Rao", "weight": 70.0, "program": "FL"}
+    res = services.calculate_client_analytics(client, [], [], [])
+    assert res["total_workouts"] == 0
+    assert res["total_duration_min"] == 0
+    assert res["avg_adherence"] is None
+    assert res["weight_delta"] == 0.0
+    assert res["fitness_rating"] == "Unranked"
+
+
+def test_calculate_client_analytics_no_initial_weight():
+    client = {"name": "Asha Rao", "weight": None, "program": "FL"}
+    metrics = [{"weight": 65.0}]
+    res = services.calculate_client_analytics(client, [], [], metrics)
+    assert res["weight_delta"] == 0.0

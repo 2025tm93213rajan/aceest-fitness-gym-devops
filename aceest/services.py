@@ -196,3 +196,41 @@ def validate_metrics(data):
     if weight is None and waist is None and bodyfat is None:
         errors.append("send at least one of weight, waist, bodyfat")
     return {"date": d, "weight": weight, "waist": waist, "bodyfat": bodyfat}, errors
+
+
+def fitness_rating(avg_adherence, workout_count):
+    if avg_adherence is None and workout_count == 0:
+        return "Unranked"
+    if (avg_adherence is not None and avg_adherence >= 80) or workout_count >= 10:
+        return "Elite"
+    if (avg_adherence is not None and avg_adherence >= 60) or workout_count >= 5:
+        return "Consistent"
+    return "Developing"
+
+
+def calculate_client_analytics(client, progress_rows, workout_rows, metrics_rows):
+    workout_count = len(workout_rows)
+    total_duration = sum(w.get("duration_min", 0) for w in workout_rows if w.get("duration_min"))
+    adherence_scores = [p["adherence"] for p in progress_rows if p.get("adherence") is not None]
+    avg_adherence = (
+        round(sum(adherence_scores) / len(adherence_scores), 1) if adherence_scores else None
+    )
+
+    initial_weight = client.get("weight")
+    latest_metric_weight = next(
+        (m["weight"] for m in metrics_rows if m.get("weight") is not None), None
+    )
+    if latest_metric_weight is not None and initial_weight is not None:
+        weight_delta = round(latest_metric_weight - initial_weight, 1)
+    else:
+        weight_delta = 0.0
+
+    rating = fitness_rating(avg_adherence, workout_count)
+    return {
+        "program": client.get("program"),
+        "total_workouts": workout_count,
+        "total_duration_min": total_duration,
+        "avg_adherence": avg_adherence,
+        "weight_delta": weight_delta,
+        "fitness_rating": rating,
+    }
