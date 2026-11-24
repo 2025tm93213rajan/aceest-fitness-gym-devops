@@ -41,38 +41,8 @@ The core objective of **Assignment 2** is to expand the automated DevOps deliver
 
 The complete delivery lifecycle integrates version control, automated quality gates, container registries, and Kubernetes progressive orchestration:
 
-```mermaid
-flowchart TD
-    subgraph VCS ["1. Version Control (Git & GitHub)"]
-        DEV["Developer Commits"] --> PR["Pull Request / Feature Branch"]
-        PR --> MASTER["master Branch (v1.0.0 / v2.0.0 Tags)"]
-    end
-
-    subgraph CI ["2. Continuous Integration & Quality Gate"]
-        MASTER --> GHA["GitHub Actions CI"]
-        MASTER --> JENKINS["Jenkins Build Pipeline (Port 8081)"]
-        JENKINS --> LINT["Flake8 Linting & Syntax Check"]
-        LINT --> PYTEST["Pytest Execution (91 Tests, 100% Coverage)"]
-        PYTEST --> XML["Generate JUnit & Cobertura XML Reports"]
-        XML --> SONAR["SonarQube Quality Gate (Port 9000)"]
-    end
-
-    subgraph REGISTRY ["3. Multi-Version Container Registry"]
-        SONAR --> DOCKER_BUILD["Docker Multi-Stage Build"]
-        DOCKER_BUILD --> DHUB["Docker Hub Registry (2025tm93213rajan/aceest-fitness)"]
-        DHUB --> TAGS["Tags: v1.0.0, v2.0.0, canary, latest"]
-    end
-
-    subgraph CD ["4. Kubernetes Progressive Delivery (Minikube / Cluster)"]
-        TAGS --> BASE["Base: Namespace, ConfigMap, PVC"]
-        BASE --> ROLLING["Strategy 1: Rolling Update (Port 30080)"]
-        BASE --> BLUE_GREEN["Strategy 2: Blue-Green (Port 30081 / 30082)"]
-        BASE --> CANARY["Strategy 3: Canary Release (Port 30083)"]
-        BASE --> SHADOW["Strategy 4: Shadow Dark Launch (Port 30084)"]
-        BASE --> AB["Strategy 5: A/B Testing (Port 30085 / 30086)"]
-        ROLLING --> ROLLBACK["Automated Rollback Engine"]
-    end
-```
+![ACEest End-to-End Delivery Lifecycle](docs/mermaid-images/assignment-2-flowchart.png)
+_Figure 1: ACEest End-to-End Multi-Version CI/CD and Progressive Kubernetes Delivery Architecture._
 
 ---
 
